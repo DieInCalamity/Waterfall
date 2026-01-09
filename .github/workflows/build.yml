@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - master
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,17 +15,32 @@ jobs:
       matrix:
         java: [8, 11, 17, 21]
       fail-fast: true
+
     steps:
       - uses: actions/checkout@v4
-      - name: Install Java ${{ matrix.java }}
+
+      - name: Set up Java ${{ matrix.java }}
         uses: actions/setup-java@v3
         with:
           java-version: ${{ matrix.java }}
           distribution: 'zulu'
+
       - name: patch
         run: |
           git config --global user.email "no-reply@github.com"
-          git config --global user.name "Github Actions"
+          git config --global user.name "GitHub Actions"
           ./waterfall p
+
       - name: build
         run: mvn clean install javadoc:javadoc -B
+
+      - name: collect jars
+        run: |
+          mkdir -p artifacts
+          find . -name "*.jar" -not -path "./.mvn/*" -not -path "./.github/*" -print0 | xargs -0 -I{} cp {} artifacts/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: waterfall-jars-java-${{ matrix.java }}
+          path: artifacts/
